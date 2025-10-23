@@ -19,6 +19,7 @@ namespace SportBooking.Controllers.Admin
             _mapper = mapper;
         }
 
+        // ✅ Lấy toàn bộ người dùng
         [HttpGet]
         public async Task<ActionResult<IEnumerable<UserDto>>> GetAll()
         {
@@ -26,7 +27,8 @@ namespace SportBooking.Controllers.Admin
             return Ok(_mapper.Map<IEnumerable<UserDto>>(users));
         }
 
-        [HttpGet("{id}")]
+        // ✅ Lấy theo ID
+        [HttpGet("{id:int}")]
         public async Task<ActionResult<UserDto>> GetById(int id)
         {
             var user = await _context.Users.FindAsync(id);
@@ -34,28 +36,44 @@ namespace SportBooking.Controllers.Admin
             return Ok(_mapper.Map<UserDto>(user));
         }
 
+        // ✅ Tạo mới (ID tự tăng)
         [HttpPost]
-        public async Task<ActionResult<UserDto>> Create(UserDto dto)
+        public async Task<ActionResult<UserDto>> Create(UserCreateDto dto)
         {
+            // Check username trùng
+            if (await _context.Users.AnyAsync(u => u.Username == dto.Username))
+                return BadRequest($"Username '{dto.Username}' đã tồn tại!");
+
             var user = _mapper.Map<User>(dto);
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetById), new { id = user.UserId }, _mapper.Map<UserDto>(user));
+
+            var result = _mapper.Map<UserDto>(user);
+            return CreatedAtAction(nameof(GetById), new { id = user.UserId }, result);
         }
 
-        [HttpPut("{id}")]
+        // ✅ Cập nhật thông tin
+        [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, UserDto dto)
         {
-            if (id != dto.UserId) return BadRequest();
+            if (id != dto.UserId)
+                return BadRequest("UserId không khớp");
+
             var user = await _context.Users.FindAsync(id);
             if (user == null) return NotFound();
 
-            _mapper.Map(dto, user);
+            // Cập nhật thông tin
+            user.Username = dto.Username;
+            user.Email = dto.Email;
+            user.Phone = dto.Phone;
+            user.Role = dto.Role;
+
             await _context.SaveChangesAsync();
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
+        // ✅ Xoá người dùng
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
             var user = await _context.Users.FindAsync(id);
@@ -65,7 +83,6 @@ namespace SportBooking.Controllers.Admin
             await _context.SaveChangesAsync();
             return NoContent();
         }
-
     }
 
 }

@@ -19,6 +19,18 @@ public partial class Field
 
     public int? OwnerId { get; set; }
 
+    public string? Type { get; set; }
+
+    public TimeOnly? OpenTime { get; set; }
+
+    public TimeOnly? CloseTime { get; set; }
+
+    public string? OpenDays { get; set; }
+
+    public bool? IsFixedPrice { get; set; }
+
+    public string? Link { get; set; }
+
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 
     public virtual ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();

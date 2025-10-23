@@ -4,7 +4,13 @@ using SportBooking.Mappers;
 using SportBooking.Models;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader());
+});
 builder.Services.AddDbContext<SportBookingDbContext>(opt => 
     opt.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
 builder.Services.AddAutoMapper(typeof(RegisterProfile).Assembly);
@@ -26,6 +32,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 var app = builder.Build();
+app.UseCors("AllowAll");
 app.UseSwagger();
 app.UseSwaggerUI();
 app.MapControllers();

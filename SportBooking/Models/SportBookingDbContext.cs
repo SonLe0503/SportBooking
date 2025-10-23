@@ -27,7 +27,9 @@ public partial class SportBookingDbContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) { }
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseSqlServer("server=(local);database=SportBookingDB;uid=sa;pwd=12345;TrustServerCertificate=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -90,6 +92,7 @@ public partial class SportBookingDbContext : DbContext
             entity.HasKey(e => e.FieldId).HasName("PK__Fields__F0AC27FE11A5C9C1");
 
             entity.Property(e => e.FieldId).HasColumnName("fieldID");
+            entity.Property(e => e.CloseTime).HasColumnName("closeTime");
             entity.Property(e => e.Description).HasColumnName("description");
             entity.Property(e => e.FieldName)
                 .HasMaxLength(100)
@@ -97,13 +100,26 @@ public partial class SportBookingDbContext : DbContext
             entity.Property(e => e.Image)
                 .HasMaxLength(255)
                 .HasColumnName("image");
+            entity.Property(e => e.IsFixedPrice)
+                .HasDefaultValue(true)
+                .HasColumnName("isFixedPrice");
+            entity.Property(e => e.Link)
+                .HasMaxLength(255)
+                .HasColumnName("link");
             entity.Property(e => e.Location)
                 .HasMaxLength(255)
                 .HasColumnName("location");
+            entity.Property(e => e.OpenDays)
+                .HasMaxLength(100)
+                .HasColumnName("openDays");
+            entity.Property(e => e.OpenTime).HasColumnName("openTime");
             entity.Property(e => e.OwnerId).HasColumnName("ownerID");
             entity.Property(e => e.Price)
                 .HasColumnType("decimal(10, 2)")
                 .HasColumnName("price");
+            entity.Property(e => e.Type)
+                .HasMaxLength(50)
+                .HasColumnName("type");
 
             entity.HasOne(d => d.Owner).WithMany(p => p.Fields)
                 .HasForeignKey(d => d.OwnerId)
