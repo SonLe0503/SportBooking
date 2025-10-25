@@ -35,6 +35,8 @@ var app = builder.Build();
 app.UseCors("AllowAll");
 app.UseSwagger();
 app.UseSwaggerUI();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
