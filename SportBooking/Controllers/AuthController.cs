@@ -38,7 +38,7 @@ namespace SportBooking.Controllers
             return Ok("User registered successfully");
         }
         [HttpPost]
-        public IActionResult Login(LoginRequest request)
+        public IActionResult Login([FromBody] LoginRequest request)
         {
             var user = _context.Users.FirstOrDefault(u => u.Username == request.Username);
             if (user == null)
