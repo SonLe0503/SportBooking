@@ -18,6 +18,7 @@ public partial class User
     public string? Role { get; set; }
 
     public DateTime? CreatedAt { get; set; }
+    public string? Avatar { get; set; }
 
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 

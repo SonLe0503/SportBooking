@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SportBooking.Models;
 
@@ -11,9 +12,11 @@ using SportBooking.Models;
 namespace SportBooking.Migrations
 {
     [DbContext(typeof(SportBookingDbContext))]
-    partial class SportBookingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251028131703_AddAvatarAndCourtFields")]
+    partial class AddAvatarAndCourtFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -76,34 +79,37 @@ namespace SportBooking.Migrations
                 {
                     b.Property<int>("FeedbackId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("feedbackID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FeedbackId"));
 
                     b.Property<string>("Comment")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("comment");
 
                     b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("(getdate())");
 
                     b.Property<int?>("FieldId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ParentFeedbackId")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("fieldID");
 
                     b.Property<int?>("Rating")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("rating");
 
                     b.Property<int?>("UserId")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("userID");
 
                     b.HasKey("FeedbackId")
                         .HasName("PK__Feedback__2613FDC4EC80AAA4");
 
                     b.HasIndex("FieldId");
-
-                    b.HasIndex("ParentFeedbackId");
 
                     b.HasIndex("UserId");
 
@@ -138,14 +144,16 @@ namespace SportBooking.Migrations
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("fieldName");
 
-                    b.Property<decimal?>("FixedPrice")
-                        .HasColumnType("decimal(10, 2)")
-                        .HasColumnName("fixedPrice");
-
                     b.Property<string>("Image")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)")
                         .HasColumnName("image");
+
+                    b.Property<bool?>("IsFixedPrice")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasColumnName("isFixedPrice");
 
                     b.Property<string>("Link")
                         .HasMaxLength(255)
@@ -343,10 +351,6 @@ namespace SportBooking.Migrations
                         .HasForeignKey("FieldId")
                         .HasConstraintName("FK__Feedbacks__field__46E78A0C");
 
-                    b.HasOne("SportBooking.Models.Feedback", null)
-                        .WithMany("Replies")
-                        .HasForeignKey("ParentFeedbackId");
-
                     b.HasOne("SportBooking.Models.User", "User")
                         .WithMany("Feedbacks")
                         .HasForeignKey("UserId")
@@ -395,11 +399,6 @@ namespace SportBooking.Migrations
             modelBuilder.Entity("SportBooking.Models.Booking", b =>
                 {
                     b.Navigation("Payments");
-                });
-
-            modelBuilder.Entity("SportBooking.Models.Feedback", b =>
-                {
-                    b.Navigation("Replies");
                 });
 
             modelBuilder.Entity("SportBooking.Models.Field", b =>

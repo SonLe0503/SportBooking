@@ -76,8 +76,9 @@ namespace SportBooking.Controllers
                     Subject = new ClaimsIdentity(new[]
                     {
                         new Claim("userID", user.UserId.ToString()),
-                        new Claim("username", user.Username),
-                        new Claim("role", user.Role)
+                         new Claim("username", user.Username),
+                        new Claim("role", user.Role),
+                        new Claim("avatar", user.Avatar ?? "") // <-- THÊM DÒNG NÀY
                     }),
                     Expires = DateTime.UtcNow.AddHours(2),
                     Issuer = _configuration["Jwt:Issuer"],

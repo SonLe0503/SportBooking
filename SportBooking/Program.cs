@@ -37,11 +37,8 @@ builder.Services.AddDataProtection()
     .SetApplicationName("SportBookingApp");
 var app = builder.Build();
 app.UseCors("AllowAll");
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(@"d:\DZHosts\LocalUser\hungds16\www.sportspace.somee.com\keys"),
-    RequestPath = "/keys"
-});
+app.UseStaticFiles();
+
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseAuthentication();

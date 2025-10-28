@@ -27,9 +27,11 @@ public partial class Field
 
     public string? OpenDays { get; set; }
 
-    public bool? IsFixedPrice { get; set; }
+    public decimal? FixedPrice { get; set; }
 
     public string? Link { get; set; }
+    public string? Avatar { get; set; } 
+    public string? CourtDetails { get; set; } 
 
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 

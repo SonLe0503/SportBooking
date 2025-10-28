@@ -64,25 +64,22 @@ public partial class SportBookingDbContext : DbContext
         {
             entity.HasKey(e => e.FeedbackId).HasName("PK__Feedback__2613FDC4EC80AAA4");
 
-            entity.Property(e => e.FeedbackId).HasColumnName("feedbackID");
-            entity.Property(e => e.Comment).HasColumnName("comment");
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnType("datetime")
-                .HasColumnName("createdAt");
-            entity.Property(e => e.FieldId).HasColumnName("fieldID");
-            entity.Property(e => e.Rating).HasColumnName("rating");
-            entity.Property(e => e.UserId).HasColumnName("userID");
+            // ... (tất cả các dòng entity.Property(...) của bạn) ...
 
-            entity.HasOne(d => d.Field).WithMany(p => p.Feedbacks)
-                .HasForeignKey(d => d.FieldId)
-                .HasConstraintName("FK__Feedbacks__field__46E78A0C");
+            entity.HasOne(d => d.Field).WithMany(p => p.Feedbacks)
+        .HasForeignKey(d => d.FieldId)
+        .HasConstraintName("FK__Feedbacks__field__46E78A0C");
 
             entity.HasOne(d => d.User).WithMany(p => p.Feedbacks)
-                .HasForeignKey(d => d.UserId)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("FK__Feedbacks__userI__45F365D3");
-        });
+              .HasForeignKey(d => d.UserId)
+              .OnDelete(DeleteBehavior.Cascade)
+              .HasConstraintName("FK__Feedbacks__userI__45F365D3");
+
+            entity.HasMany(e => e.Replies) 
+                .WithOne()               
+                .HasForeignKey(e => e.ParentFeedbackId) 
+                .OnDelete(DeleteBehavior.ClientSetNull); 
+        }); 
 
         modelBuilder.Entity<Field>(entity =>
         {
@@ -97,9 +94,9 @@ public partial class SportBookingDbContext : DbContext
             entity.Property(e => e.Image)
                 .HasMaxLength(255)
                 .HasColumnName("image");
-            entity.Property(e => e.IsFixedPrice)
-                .HasDefaultValue(true)
-                .HasColumnName("isFixedPrice");
+            entity.Property(e => e.FixedPrice) 
+             .HasColumnType("decimal(10, 2)") 
+             .HasColumnName("fixedPrice");
             entity.Property(e => e.Link)
                 .HasMaxLength(255)
                 .HasColumnName("link");
