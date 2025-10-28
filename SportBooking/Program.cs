@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using SportBooking.Mappers;
 using SportBooking.Models;
 
@@ -30,9 +32,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
         };
     });
-
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(@"d:\DZHosts\LocalUser\hungds16\www.sportspace.somee.com\keys"))
+    .SetApplicationName("SportBookingApp");
 var app = builder.Build();
 app.UseCors("AllowAll");
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(@"d:\DZHosts\LocalUser\hungds16\www.sportspace.somee.com\keys"),
+    RequestPath = "/keys"
+});
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseAuthentication();

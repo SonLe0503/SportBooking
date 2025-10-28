@@ -1,18 +1,23 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SportBooking.DTO;
 using SportBooking.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 
 namespace SportBooking.Controllers
 {
     [Route("api/[controller]/[action]")]
-    public class AuthController : Controller
+    [ApiController]
+    public class AuthController : ControllerBase
     {
         private readonly SportBookingDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly IMapper _mapper;
+
         public AuthController(SportBookingDbContext context, IConfiguration configuration, IMapper mapper)
         {
             _context = context;
@@ -21,54 +26,79 @@ namespace SportBooking.Controllers
         }
 
         [HttpPost]
-        public IActionResult Register(RegisterRequest request)
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            if (_context.Users.Any(u => u.Email == request.Email))
+            try
             {
-                return BadRequest("Email already exists");
+                if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+                    return BadRequest(new { message = "Email already exists" });
+
+                if (await _context.Users.AnyAsync(u => u.Username == request.Username))
+                    return BadRequest(new { message = "Username already exists" });
+
+                var user = _mapper.Map<User>(request);
+                user.Password = BCrypt.Net.BCrypt.HashPassword(request.Password);
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "User registered successfully" });
             }
-            if (_context.Users.Any(u => u.Username == request.Username))
+            catch (Exception ex)
             {
-                return BadRequest("Username already exists");
+                Console.WriteLine(ex);
+                return StatusCode(500, new { message = "Internal server error" });
             }
-            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
-            var user = _mapper.Map<User>(request);
-            _context.Users.Add(user);
-            _context.SaveChanges();
-            return Ok("User registered successfully");
-        }
-        [HttpPost]
-        public IActionResult Login([FromBody] LoginRequest request)
-        {
-            var user = _context.Users.FirstOrDefault(u => u.Username == request.Username);
-            if (user == null)
-            {
-                return Unauthorized(new { message = "Invalid username" });
-            }
-            bool verified = BCrypt.Net.BCrypt.Verify(request.Password, user.Password);
-            if (!verified)
-            {
-                return Unauthorized(new { message = "Invalid password" });
-            }
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]);
-            var tokenDescriptor = new Microsoft.IdentityModel.Tokens.SecurityTokenDescriptor
-            {
-                Subject = new System.Security.Claims.ClaimsIdentity(new[]
-                {
-                    new System.Security.Claims.Claim("userID", user.UserId.ToString()),
-                    new System.Security.Claims.Claim("username", user.Username),
-                    new System.Security.Claims.Claim("role", user.Role)
-                }),
-                Expires = DateTime.UtcNow.AddHours(2),
-                Issuer = _configuration["Jwt:Issuer"],
-                Audience = _configuration["Jwt:Audience"],
-                SigningCredentials = new Microsoft.IdentityModel.Tokens.SigningCredentials(new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(key), Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256Signature)
-            };
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            var jwtToken = tokenHandler.WriteToken(token);
-            return Ok(new { message = "Đăng nhập thành công", token = jwtToken });
         }
 
+        [HttpPost]
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        {
+            try
+            {
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
+
+                // Check user tồn tại & password không null & verify
+                if (user == null || string.IsNullOrEmpty(user.Password) ||
+                    !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
+                {
+                    return Unauthorized(new { message = "Invalid username or password" });
+                }
+
+                var keyString = _configuration["Jwt:Key"];
+                if (string.IsNullOrEmpty(keyString))
+                    throw new Exception("JWT Key not configured");
+
+                var key = Encoding.UTF8.GetBytes(keyString);
+
+                var tokenDescriptor = new SecurityTokenDescriptor
+                {
+                    Subject = new ClaimsIdentity(new[]
+                    {
+                        new Claim("userID", user.UserId.ToString()),
+                        new Claim("username", user.Username),
+                        new Claim("role", user.Role)
+                    }),
+                    Expires = DateTime.UtcNow.AddHours(2),
+                    Issuer = _configuration["Jwt:Issuer"],
+                    Audience = _configuration["Jwt:Audience"],
+                    SigningCredentials = new SigningCredentials(
+                        new SymmetricSecurityKey(key),
+                        SecurityAlgorithms.HmacSha256Signature
+                    )
+                };
+
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var token = tokenHandler.CreateToken(tokenDescriptor);
+                var jwtToken = tokenHandler.WriteToken(token);
+
+                return Ok(new { message = "Login successful", token = jwtToken });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex); // log ra console hoặc file
+                return StatusCode(500, new { message = "Internal server error" });
+            }
+        }
     }
 }

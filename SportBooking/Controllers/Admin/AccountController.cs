@@ -40,17 +40,21 @@ namespace SportBooking.Controllers.Admin
         [HttpPost]
         public async Task<ActionResult<UserDto>> Create(UserCreateDto dto)
         {
-            // Check username trùng
             if (await _context.Users.AnyAsync(u => u.Username == dto.Username))
                 return BadRequest($"Username '{dto.Username}' đã tồn tại!");
 
             var user = _mapper.Map<User>(dto);
+
+            // ✅ Hash password trước khi lưu
+            user.Password = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
             var result = _mapper.Map<UserDto>(user);
             return CreatedAtAction(nameof(GetById), new { id = user.UserId }, result);
         }
+
 
         // ✅ Cập nhật thông tin
         [HttpPut("{id:int}")]
