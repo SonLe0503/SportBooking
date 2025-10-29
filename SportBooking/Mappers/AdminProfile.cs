@@ -9,7 +9,9 @@ namespace SportBooking.Mappers
         public AdminProfile() {
             CreateMap<Field, FieldsDto>().ReverseMap();
 
-            CreateMap<FieldCreateDto, Field>();
+            // SỬA ĐỔI QUAN TRỌNG:
+            CreateMap<FieldCreateDto, Field>()
+                .ForMember(dest => dest.Image, opt => opt.Ignore());
         }
     }
 }

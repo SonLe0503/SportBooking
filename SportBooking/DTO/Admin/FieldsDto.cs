@@ -14,7 +14,16 @@
         public TimeOnly? OpenTime { get; set; }
         public TimeOnly? CloseTime { get; set; }
         public string? OpenDays { get; set; }
-        public bool? IsFixedPrice { get; set; }
+
+        // SỬA ĐỔI 1: Đổi từ bool? IsFixedPrice thành decimal? FixedPrice
+        public decimal? FixedPrice { get; set; }
+
         public string? Link { get; set; }
+
+        // SỬA ĐỔI 2: Thêm Avatar
+        public string? Avatar { get; set; }
+
+        // SỬA ĐỔI 3: Thêm CourtDetails
+        public string? CourtDetails { get; set; }
     }
 }
