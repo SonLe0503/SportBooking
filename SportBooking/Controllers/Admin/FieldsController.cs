@@ -38,28 +38,40 @@ namespace SportBooking.Controllers.Admin
         }
 
         [HttpPost]
-        [RequestSizeLimit(10_000_000)]
+        [RequestSizeLimit(10_000_000)] // 10MB
         public async Task<IActionResult> Create([FromForm] FieldCreateDto dto)
         {
-            if (dto.ImageFile == null || dto.ImageFile.Length == 0)
-                return BadRequest("Ảnh không hợp lệ");
+            // Map dữ liệu (AutoMapper sẽ bỏ qua Image và Avatar)
+            var field = _mapper.Map<Field>(dto);
 
             // Tạo thư mục nếu chưa có
             var folder = Path.Combine(_env.WebRootPath, "images", "fields");
             if (!Directory.Exists(folder))
                 Directory.CreateDirectory(folder);
 
-            // Lưu file ảnh
-            var fileName = Guid.NewGuid() + Path.GetExtension(dto.ImageFile.FileName);
-            var filePath = Path.Combine(folder, fileName);
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            // SỬA ĐỔI 1: Xử lý upload ImageFile (nếu có)
+            if (dto.ImageFile != null && dto.ImageFile.Length > 0)
             {
-                await dto.ImageFile.CopyToAsync(stream);
+                var fileName = Guid.NewGuid() + Path.GetExtension(dto.ImageFile.FileName);
+                var filePath = Path.Combine(folder, fileName);
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await dto.ImageFile.CopyToAsync(stream);
+                }
+                field.Image = $"/images/fields/{fileName}"; // gán Image thủ công
             }
 
-            // Map dữ liệu
-            var field = _mapper.Map<Field>(dto);
-            field.Image = $"/images/fields/{fileName}";
+            // SỬA ĐỔI 2: Xử lý upload AvatarFile (nếu có)
+            if (dto.AvatarFile != null && dto.AvatarFile.Length > 0)
+            {
+                var avatarFileName = Guid.NewGuid() + Path.GetExtension(dto.AvatarFile.FileName);
+                var avatarFilePath = Path.Combine(folder, avatarFileName);
+                using (var stream = new FileStream(avatarFilePath, FileMode.Create))
+                {
+                    await dto.AvatarFile.CopyToAsync(stream);
+                }
+                field.Avatar = $"/images/fields/{avatarFileName}"; // gán Avatar thủ công
+            }
 
             _context.Fields.Add(field);
             await _context.SaveChangesAsync();
@@ -73,23 +85,53 @@ namespace SportBooking.Controllers.Admin
             var field = await _context.Fields.FindAsync(id);
             if (field == null) return NotFound();
 
+            // Map các trường text (AutoMapper bỏ qua Image, Avatar)
             _mapper.Map(dto, field);
 
+            var folder = Path.Combine(_env.WebRootPath, "images", "fields");
+            if (!Directory.Exists(folder))
+                Directory.CreateDirectory(folder);
+
+            // SỬA ĐỔI 3: Xử lý upload ImageFile (cải tiến: xóa file cũ nếu có)
             if (dto.ImageFile != null)
             {
-                var folder = Path.Combine(_env.WebRootPath, "images", "fields");
-                if (!Directory.Exists(folder))
-                    Directory.CreateDirectory(folder);
+                // Xóa file Image cũ
+                if (!string.IsNullOrEmpty(field.Image))
+                {
+                    var oldImagePath = Path.Combine(_env.WebRootPath, field.Image.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (System.IO.File.Exists(oldImagePath))
+                        System.IO.File.Delete(oldImagePath);
+                }
 
+                // Lưu file Image mới
                 var fileName = Guid.NewGuid() + Path.GetExtension(dto.ImageFile.FileName);
                 var filePath = Path.Combine(folder, fileName);
-
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
                     await dto.ImageFile.CopyToAsync(stream);
                 }
-
                 field.Image = $"/images/fields/{fileName}";
+            }
+
+            // SỬA ĐỔI 4: Xử lý upload AvatarFile (cải tiến: xóa file cũ nếu có)
+            if (dto.AvatarFile != null)
+            {
+                // Xóa file Avatar cũ
+                if (!string.IsNullOrEmpty(field.Avatar))
+                {
+                    var oldAvatarPath = Path.Combine(_env.WebRootPath, field.Avatar.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (System.IO.File.Exists(oldAvatarPath))
+                        System.IO.File.Delete(oldAvatarPath);
+                }
+
+                // Lưu file Avatar mới
+                var avatarFileName = Guid.NewGuid() + Path.GetExtension(dto.AvatarFile.FileName);
+                var avatarFilePath = Path.Combine(folder, avatarFileName);
+                using (var stream = new FileStream(avatarFilePath, FileMode.Create))
+                {
+                    await dto.AvatarFile.CopyToAsync(stream);
+                }
+                field.Avatar = $"/images/fields/{avatarFileName}";
             }
 
             await _context.SaveChangesAsync();
@@ -102,7 +144,7 @@ namespace SportBooking.Controllers.Admin
             var field = await _context.Fields.FindAsync(id);
             if (field == null) return NotFound();
 
-            // Xóa ảnh vật lý
+            // Xóa ảnh Image vật lý
             if (!string.IsNullOrEmpty(field.Image))
             {
                 var fullPath = Path.Combine(_env.WebRootPath, field.Image.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
@@ -110,10 +152,17 @@ namespace SportBooking.Controllers.Admin
                     System.IO.File.Delete(fullPath);
             }
 
+            // SỬA ĐỔI 5: Xóa ảnh Avatar vật lý
+            if (!string.IsNullOrEmpty(field.Avatar))
+            {
+                var fullAvatarPath = Path.Combine(_env.WebRootPath, field.Avatar.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (System.IO.File.Exists(fullAvatarPath))
+                    System.IO.File.Delete(fullAvatarPath);
+            }
+
             _context.Fields.Remove(field);
             await _context.SaveChangesAsync();
             return NoContent();
         }
     }
-
 }

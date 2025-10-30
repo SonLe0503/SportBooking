@@ -9,9 +9,13 @@ namespace SportBooking.Mappers
         public AdminProfile() {
             CreateMap<Field, FieldsDto>().ReverseMap();
 
-            // SỬA ĐỔI QUAN TRỌNG:
             CreateMap<FieldCreateDto, Field>()
-                .ForMember(dest => dest.Image, opt => opt.Ignore());
+                // Đã có từ trước (vì ImageFile cần xử lý thủ công)
+                .ForMember(dest => dest.Image, opt => opt.Ignore())
+
+                // SỬA LẠI THEO YÊU CẦU MỚI:
+                // Thêm dòng này để bỏ qua AvatarFile
+                .ForMember(dest => dest.Avatar, opt => opt.Ignore());
         }
     }
 }

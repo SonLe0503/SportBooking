@@ -12,17 +12,15 @@
         public TimeOnly? OpenTime { get; set; }
         public TimeOnly? CloseTime { get; set; }
         public string? OpenDays { get; set; }
-
-        // SỬA 1: Đổi tên và kiểu dữ liệu từ bool? sang decimal?
-        public decimal? FixedPrice { get; set; }
-
+        public decimal? FixedPrice { get; set; } // Giữ nguyên (đã sửa)
         public string? Link { get; set; }
-        public IFormFile? ImageFile { get; set; } // Giữ nguyên để upload ảnh
+        public string? CourtDetails { get; set; } // Giữ nguyên (đã sửa)
 
-        // SỬA 2: Thêm Avatar (nếu bạn gán Avatar qua URL)
-        public string? Avatar { get; set; }
+        // Giữ nguyên ImageFile
+        public IFormFile? ImageFile { get; set; }
 
-        // SỬA 3: Thêm CourtDetails
-        public string? CourtDetails { get; set; }
+        // SỬA LẠI THEO YÊU CẦU MỚI:
+        // Đổi từ string? Avatar thành IFormFile? AvatarFile
+        public IFormFile? AvatarFile { get; set; }
     }
 }

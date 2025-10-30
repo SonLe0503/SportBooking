@@ -25,7 +25,7 @@
         public string? Phone { get; set; }
         public string? Role { get; set; } = "USER";
 
-        // SỬA 4: Thêm trường Avatar (nếu Admin được set lúc tạo)
-        public string? Avatar { get; set; }
+       
+      
     }
 }
