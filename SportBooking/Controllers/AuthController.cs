@@ -58,7 +58,6 @@ namespace SportBooking.Controllers
             {
                 var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
 
-                // Check user tồn tại & password không null & verify
                 if (user == null || string.IsNullOrEmpty(user.Password) ||
                     !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
                 {
@@ -75,10 +74,10 @@ namespace SportBooking.Controllers
                 {
                     Subject = new ClaimsIdentity(new[]
                     {
-                        new Claim("userID", user.UserId.ToString()),
-                         new Claim("username", user.Username),
-                        new Claim("role", user.Role),
-                        new Claim("avatar", user.Avatar ?? "") // <-- THÊM DÒNG NÀY
+                        new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()), // ✅ đổi chuẩn
+                        new Claim(ClaimTypes.Name, user.Username ?? ""),
+                        new Claim(ClaimTypes.Role, user.Role ?? ""),
+                        new Claim("avatar", user.Avatar ?? "")
                     }),
                     Expires = DateTime.UtcNow.AddHours(2),
                     Issuer = _configuration["Jwt:Issuer"],
@@ -97,7 +96,7 @@ namespace SportBooking.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex); // log ra console hoặc file
+                Console.WriteLine(ex);
                 return StatusCode(500, new { message = "Internal server error" });
             }
         }

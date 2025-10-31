@@ -1,123 +1,97 @@
 ﻿using AutoMapper;
-using Microsoft.AspNetCore.Authorization; // <-- QUAN TRỌNG
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens; // <-- Thêm
+using Microsoft.IdentityModel.Tokens;
 using SportBooking.DTO;
 using SportBooking.Models;
-using System.IdentityModel.Tokens.Jwt; // <-- Thêm
-using System.Security.Claims; // <-- QUAN TRỌNG
-using System.Text; // <-- Thêm
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace SportBooking.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // <-- TOÀN BỘ CONTROLLER NÀY YÊU CẦU ĐĂNG NHẬP
+    [Authorize]
     public class ProfileController : ControllerBase
     {
         private readonly SportBookingDbContext _context;
         private readonly IWebHostEnvironment _env;
-        private readonly IConfiguration _configuration; // <-- Thêm IConfiguration
+        private readonly IConfiguration _configuration;
+
+        public ProfileController(SportBookingDbContext context, IWebHostEnvironment env, IConfiguration configuration)
+        {
+            _context = context;
+            _env = env;
+            _configuration = configuration;
+        }
 
         [HttpPost("avatar")]
-        [Authorize] // <-- Bắt buộc user phải đăng nhập
-        [RequestSizeLimit(5_000_000)] // Giới hạn 5MB
-        public async Task<IActionResult> UpdateUserAvatar([FromForm] AvatarUploadDTO dto) // <-- 1. Dùng DTO
+        [RequestSizeLimit(5_000_000)]
+        public async Task<IActionResult> UpdateUserAvatar([FromForm] AvatarUploadDTO dto)
         {
-            // 2. Kiểm tra file (lấy từ dto)
             if (dto.AvatarFile == null || dto.AvatarFile.Length == 0)
-            {
                 return BadRequest(new { message = "Bạn chưa chọn file ảnh." });
-            }
 
-            // 3. Lấy file ra từ DTO
-            var avatarFile = dto.AvatarFile; // <-- KHÔNG CÒN LỖI
+            // ✅ Lấy userID từ token theo chuẩn mới
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                return Unauthorized(new { message = "Token không hợp lệ hoặc thiếu userID." });
 
-            // 4. Lấy UserId của user đang đăng nhập từ Token (JWT)
-            var userIdClaim = User.FindFirst("userID");
-            if (userIdClaim == null)
-            {
-                return Unauthorized();
-            }
-
-            if (!int.TryParse(userIdClaim.Value, out int userId))
-            {
-                return Unauthorized(new { message = "UserId trong token không hợp lệ." });
-            }
-
-            // 5. Tìm user trong Database
             var user = await _context.Users.FindAsync(userId);
             if (user == null)
-            {
                 return NotFound(new { message = "Không tìm thấy người dùng." });
-            }
 
-            // 6. Xử lý lưu file
             var folder = Path.Combine(_env.WebRootPath, "images", "users");
             if (!Directory.Exists(folder))
-            {
                 Directory.CreateDirectory(folder);
-            }
 
-            // 7. Xóa file avatar cũ (nếu có)
+            // Xóa avatar cũ
             if (!string.IsNullOrEmpty(user.Avatar))
             {
-                var oldAvatarPath = Path.Combine(_env.WebRootPath, user.Avatar.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                if (System.IO.File.Exists(oldAvatarPath))
-                {
-                    System.IO.File.Delete(oldAvatarPath);
-                }
+                var oldPath = Path.Combine(_env.WebRootPath, user.Avatar.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (System.IO.File.Exists(oldPath))
+                    System.IO.File.Delete(oldPath);
             }
 
-            // 8. Lưu file avatar mới
-            var avatarFileName = Guid.NewGuid() + Path.GetExtension(avatarFile.FileName);
-            var avatarFilePath = Path.Combine(folder, avatarFileName);
-
-            using (var stream = new FileStream(avatarFilePath, FileMode.Create))
+            // Lưu file mới
+            var fileName = Guid.NewGuid() + Path.GetExtension(dto.AvatarFile.FileName);
+            var filePath = Path.Combine(folder, fileName);
+            using (var stream = new FileStream(filePath, FileMode.Create))
             {
-                await avatarFile.CopyToAsync(stream);
+                await dto.AvatarFile.CopyToAsync(stream);
             }
 
-            // 9. Cập nhật URL mới vào database
-            user.Avatar = $"/images/users/{avatarFileName}";
-
+            // Cập nhật DB
+            user.Avatar = $"/images/users/{fileName}";
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
 
-            // 10. Tạo token mới với thông tin avatar mới
-            var newJwtToken = GenerateJwtToken(user); // Đảm bảo bạn có hàm này
+            // Sinh lại token mới
+            var newToken = GenerateJwtToken(user);
 
             return Ok(new
             {
                 message = "Cập nhật avatar thành công",
                 avatarUrl = user.Avatar,
-                token = newJwtToken // Trả về token mới
+                token = newToken
             });
         }
 
-        // -----------------------------------------------------------------
-        //
-        // HÀM HELPER: TẠO TOKEN (Copy từ AuthController của bạn)
-        //
-        // -----------------------------------------------------------------
         private string GenerateJwtToken(User user)
         {
             var keyString = _configuration["Jwt:Key"];
-            if (string.IsNullOrEmpty(keyString))
-                throw new Exception("JWT Key not configured");
-
             var key = Encoding.UTF8.GetBytes(keyString);
 
-            var tokenDescriptor = new SecurityTokenDescriptor
+            var descriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new[]
                 {
-                    new Claim("userID", user.UserId.ToString()),
-                    new Claim("username", user.Username ?? ""),
-                    new Claim("role", user.Role ?? ""), // Sửa lỗi null
-                    new Claim("avatar", user.Avatar ?? "") // Giờ đã có avatar mới
+                    new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+                    new Claim(ClaimTypes.Name, user.Username ?? ""),
+                    new Claim(ClaimTypes.Role, user.Role ?? ""),
+                    new Claim("avatar", user.Avatar ?? "")
                 }),
                 Expires = DateTime.UtcNow.AddHours(2),
                 Issuer = _configuration["Jwt:Issuer"],
@@ -128,9 +102,9 @@ namespace SportBooking.Controllers
                 )
             };
 
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+            var handler = new JwtSecurityTokenHandler();
+            var token = handler.CreateToken(descriptor);
+            return handler.WriteToken(token);
         }
     }
 }
